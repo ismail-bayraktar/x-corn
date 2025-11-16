@@ -1,36 +1,108 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# X-Corn - Twitter Bot Yönetim Paneli
 
-## Getting Started
+Twitter hesaplarınız için otomasyon yönetim paneli. Birden fazla hesap ile otomatik beğeni, retweet ve AI destekli yorum yapabilme.
 
-First, run the development server:
+## Özellikler
 
+- 🤖 **Çoklu Hesap Yönetimi** - Sınırsız Twitter hesabı ekleyin ve yönetin
+- 🔄 **Otomatik İşlemler** - Beğeni, retweet, AI destekli yorum
+- 📊 **Dashboard & Analytics** - Detaylı istatistikler ve aktivite geçmişi
+- 🎨 **Modern UI** - shadcn/ui ile karanlık tema
+- 🔒 **Güvenli** - Cookie bazlı authentication, doğrulama sistemi
+- 💾 **Kalıcı Veri** - MongoDB ile tüm veriler kalıcı
+
+## Teknolojiler
+
+- **Framework**: Next.js 16 (App Router)
+- **UI**: shadcn/ui, Tailwind CSS
+- **Database**: MongoDB + Mongoose
+- **Automation**: Puppeteer
+- **AI**: Groq API
+- **State**: Zustand
+- **Deployment**: Vercel
+
+## Kurulum
+
+### Gereksinimler
+
+- Node.js 20+
+- MongoDB (Docker veya MongoDB Atlas)
+- Groq API Key
+
+### Yerel Geliştirme
+
+1. **Depoyu klonlayın**
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/ismail-bayraktar/x-corn.git
+cd x-corn
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. **Bağımlılıkları yükleyin**
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. **Environment variables**
+`.env.local` dosyası oluşturun:
+```env
+MONGODB_URI=mongodb://admin:admin123@localhost:27017/xcorn?authSource=admin
+GROQ_API_KEY=your_groq_api_key_here
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+4. **MongoDB'yi başlatın** (Docker)
+```bash
+docker-compose up -d
+```
 
-## Learn More
+5. **Geliştirme sunucusunu başlatın**
+```bash
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+Tarayıcıda `http://localhost:3000` adresini açın.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Vercel Deploy
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. **MongoDB Atlas** hesabı oluşturun ve connection string alın
 
-## Deploy on Vercel
+2. **Vercel'e deploy edin**
+```bash
+vercel
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+3. **Environment Variables** ekleyin (Vercel Dashboard):
+   - `MONGODB_URI`: MongoDB Atlas connection string
+   - `GROQ_API_KEY`: Groq API key
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Kullanım
+
+### Hesap Ekleme
+
+1. **Ayarlar** sayfasına gidin
+2. **Yeni Hesap Ekle** butonuna tıklayın
+3. Twitter hesap bilgilerini girin:
+   - Username
+   - `auth_token` cookie
+   - `ct0` cookie
+4. **Kaydet** ve **Doğrula**
+
+### Cookie Alma
+
+1. Twitter'a giriş yapın
+2. DevTools → Application → Cookies → `https://x.com`
+3. `auth_token` ve `ct0` değerlerini kopyalayın
+
+### Bot Çalıştırma
+
+1. **Bot Kontrol** sayfasına gidin
+2. Kullanmak istediğiniz hesapları seçin
+3. Tweet URL'sini girin
+4. **Başlat** butonuna tıklayın
+
+## Katkıda Bulunma
+
+Pull request'ler kabul edilir. Büyük değişiklikler için önce bir issue açın.
+
+## Lisans
+
+MIT

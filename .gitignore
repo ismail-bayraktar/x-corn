@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# docker volumes
+/mongodb_data
+
+# scripts
+/scripts/seed-accounts.ts
