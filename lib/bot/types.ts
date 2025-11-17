@@ -9,11 +9,16 @@ export interface TwitterCookie {
   secure?: boolean;
 }
 
+export type CommentStyle = 'professional' | 'friendly' | 'humorous' | 'informative' | 'supportive';
+
 export interface TwitterAccount {
   id: string;
   name: string;
   canComment: boolean;
+  canLike: boolean;
+  canRetweet: boolean;
   useAI: boolean;
+  commentStyle: CommentStyle;
   enabled: boolean; // Hesap aktif/pasif durumu
   cookies: TwitterCookie[];
   createdAt: string;
@@ -36,6 +41,7 @@ export type LogLevel = 'info' | 'success' | 'error' | 'warning';
 
 export interface BotLog {
   id: string;
+  sessionId: string;
   accountName: string;
   level: LogLevel;
   message: string;

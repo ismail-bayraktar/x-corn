@@ -25,7 +25,16 @@ export async function POST(request: NextRequest) {
     await connectDB();
 
     const body = await request.json();
-    const { name, canComment, useAI, authToken, ct0 } = body;
+    const {
+      name,
+      canComment,
+      canLike,
+      canRetweet,
+      useAI,
+      commentStyle,
+      authToken,
+      ct0
+    } = body;
 
     // Validasyon
     if (!name || !authToken || !ct0) {
@@ -60,7 +69,10 @@ export async function POST(request: NextRequest) {
       id: `account-${Date.now()}`,
       name,
       canComment: canComment ?? true,
+      canLike: canLike ?? true,
+      canRetweet: canRetweet ?? true,
       useAI: useAI ?? false,
+      commentStyle: commentStyle ?? 'professional',
       enabled: true,
       cookies,
       createdAt: now,

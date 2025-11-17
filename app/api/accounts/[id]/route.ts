@@ -8,11 +8,12 @@ import { TwitterCookie } from '@/lib/bot/types';
 // GET: Tekil hesap getir
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDB();
-    const account = await Account.findOne({ id: params.id }).lean();
+    const { id } = await params;
+    const account = await Account.findOne({ id }).lean();
 
     if (!account) {
       return NextResponse.json({ error: 'Hesap bulunamadı' }, { status: 404 });
@@ -30,16 +31,26 @@ export async function GET(
 // PUT: Hesap güncelle
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDB();
 
+    const { id } = await params;
     const body = await request.json();
-    const { name, canComment, useAI, authToken, ct0 } = body;
+    const {
+      name,
+      canComment,
+      canLike,
+      canRetweet,
+      useAI,
+      commentStyle,
+      authToken,
+      ct0
+    } = body;
 
     // Mevcut hesabı al
-    const existingAccount = await Account.findOne({ id: params.id });
+    const existingAccount = await Account.findOne({ id });
     if (!existingAccount) {
       return NextResponse.json(
         { error: 'Hesap bulunamadı' },
@@ -82,11 +93,14 @@ export async function PUT(
 
     if (name) updateData.name = name;
     if (typeof canComment === 'boolean') updateData.canComment = canComment;
+    if (typeof canLike === 'boolean') updateData.canLike = canLike;
+    if (typeof canRetweet === 'boolean') updateData.canRetweet = canRetweet;
     if (typeof useAI === 'boolean') updateData.useAI = useAI;
+    if (commentStyle) updateData.commentStyle = commentStyle;
     if (cookies) updateData.cookies = cookies;
 
     const updatedAccount = await Account.findOneAndUpdate(
-      { id: params.id },
+      { id },
       { $set: updateData },
       { new: true }
     ).lean();
@@ -107,12 +121,13 @@ export async function PUT(
 // DELETE: Hesap sil
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDB();
 
-    const deleted = await Account.findOneAndDelete({ id: params.id });
+    const { id } = await params;
+    const deleted = await Account.findOneAndDelete({ id });
 
     if (!deleted) {
       return NextResponse.json({ error: 'Hesap bulunamadı' }, { status: 404 });

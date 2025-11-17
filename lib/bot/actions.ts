@@ -3,6 +3,7 @@
 import { Page } from 'puppeteer-core';
 import { clickWithRetry, wait } from './puppeteer';
 import { generateAiComment, getRandomComment } from './groq';
+import { CommentStyle } from './types';
 
 /**
  * Tweet'i beğen
@@ -63,15 +64,16 @@ export async function retweetTweet(page: Page): Promise<boolean> {
 export async function replyToTweet(
   page: Page,
   tweetText: string,
-  useAI: boolean
-): Promise<boolean> {
+  useAI: boolean,
+  commentStyle: CommentStyle = 'professional'
+): Promise<string | null> {
   // Yorum hazırla
   let comment: string | null = null;
 
   // AI ile yorum üret
   if (useAI && tweetText) {
     console.log('🤖 AI yorum üretiliyor...');
-    comment = await generateAiComment(tweetText);
+    comment = await generateAiComment(tweetText, commentStyle);
   }
 
   // AI başarısız olursa havuzdan seç
@@ -95,7 +97,7 @@ export async function replyToTweet(
     'Yanıtla butonu'
   );
 
-  if (!replyClicked) return false;
+  if (!replyClicked) return null;
 
   await wait(2000);
 
@@ -124,7 +126,7 @@ export async function replyToTweet(
 
   if (!textareaFound) {
     console.log('⚠️ Textarea bulunamadı');
-    return false;
+    return null;
   }
 
   await wait(2000);
@@ -144,7 +146,8 @@ export async function replyToTweet(
 
   if (sent) {
     console.log('✅ Yorum gönderildi');
+    return comment;
   }
 
-  return sent;
+  return null;
 }

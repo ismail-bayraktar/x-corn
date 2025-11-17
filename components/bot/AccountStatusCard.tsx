@@ -3,7 +3,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle, Clock, AlertCircle, Loader, Heart, Repeat, MessageCircle } from 'lucide-react';
-import { AccountStatus, BotActivity } from '@/lib/bot/types';
+import { AccountStatus } from '@/lib/bot/types';
+import { BotActivity } from '@/lib/bot/stats';
 
 interface AccountStatusCardProps {
   name: string;
@@ -101,7 +102,7 @@ export function AccountStatusCard({
           {lastActivity && (
             <div className="pt-2 border-t border-slate-800">
               <p className="text-xs text-slate-500 mb-2">Son Aktivite:</p>
-              <div className="space-y-1">
+              <div className="space-y-2">
                 <a
                   href={lastActivity.tweetUrl}
                   target="_blank"
@@ -110,29 +111,43 @@ export function AccountStatusCard({
                 >
                   {lastActivity.tweetUrl}
                 </a>
-                <div className="flex gap-2 text-xs">
+                <div className="flex gap-2 text-xs flex-wrap">
                   {lastActivity.actions.liked && (
-                    <Badge variant="outline" className="text-xs gap-1">
-                      <Heart className="h-3 w-3" />
+                    <Badge variant="outline" className="text-xs gap-1 bg-pink-950/30 border-pink-800">
+                      <Heart className="h-3 w-3 text-pink-400" />
                       Beğendi
                     </Badge>
                   )}
                   {lastActivity.actions.retweeted && (
-                    <Badge variant="outline" className="text-xs gap-1">
-                      <Repeat className="h-3 w-3" />
+                    <Badge variant="outline" className="text-xs gap-1 bg-green-950/30 border-green-800">
+                      <Repeat className="h-3 w-3 text-green-400" />
                       RT
                     </Badge>
                   )}
                   {lastActivity.actions.commented && (
-                    <Badge variant="outline" className="text-xs gap-1">
-                      <MessageCircle className="h-3 w-3" />
+                    <Badge variant="outline" className="text-xs gap-1 bg-blue-950/30 border-blue-800">
+                      <MessageCircle className="h-3 w-3 text-blue-400" />
                       Yorum
                     </Badge>
                   )}
                 </div>
-                <p className="text-xs text-slate-600">
-                  {new Date(lastActivity.timestamp).toLocaleString('tr-TR')}
-                </p>
+
+                {/* Yorum Metni */}
+                {lastActivity.commentText && (
+                  <div className="p-2 bg-slate-900/50 rounded border border-slate-800">
+                    <p className="text-xs text-slate-400 mb-1">Yorum:</p>
+                    <p className="text-xs text-slate-300 italic">"{lastActivity.commentText}"</p>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between text-xs text-slate-600">
+                  <span>{new Date(lastActivity.timestamp).toLocaleString('tr-TR')}</span>
+                  {lastActivity.duration > 0 && (
+                    <span className="text-slate-500">
+                      {(lastActivity.duration / 1000).toFixed(1)}s
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           )}

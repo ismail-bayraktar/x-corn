@@ -1,4 +1,5 @@
 // Groq AI yorum üretimi
+import { CommentStyle } from './types';
 
 const COMMENT_POOL = [
   // Pozitif yorumlar
@@ -43,11 +44,45 @@ const COMMENT_POOL = [
 
 const usedComments = new Set<string>();
 
+// Comment style system prompts
+const STYLE_PROMPTS: Record<CommentStyle, string> = {
+  professional:
+    'Sen profesyonel ve resmi bir iş tonu kullanan bir asistansın. ' +
+    'Yorumların 10-25 kelime arası, kibar ve saygılı olsun. ' +
+    'Düşünceli, analitik ve yapıcı yorumlar yap. ' +
+    'İş dünyası ve profesyonel iletişime uygun bir dil kullan.',
+
+  friendly:
+    'Sen arkadaş canlısı ve sıcak bir tonda konuşan bir asistansın. ' +
+    'Yorumların 5-20 kelime arası, pozitif ve samimi olsun. ' +
+    'Destekleyici, yakın ve doğal bir dil kullan. ' +
+    'İnsanları motive eden ve cesaretlendiren yorumlar yap.',
+
+  humorous:
+    'Sen esprili ve neşeli bir tonda konuşan bir asistansın. ' +
+    'Yorumların 5-20 kelime arası, hafif espri içerebilir. ' +
+    'Pozitif, eğlenceli ve akılda kalıcı yorumlar yap. ' +
+    'Ama asla aşırıya kaçma, saygılı kal.',
+
+  informative:
+    'Sen bilgilendirici ve eğitici bir tonda konuşan bir asistansın. ' +
+    'Yorumların 10-30 kelime arası, içgörü sağlayıcı olsun. ' +
+    'Değerli bilgiler ekleyen, derinleştiren yorumlar yap. ' +
+    'Analitik ve aydınlatıcı bir dil kullan.',
+
+  supportive:
+    'Sen destekleyici ve teşvik edici bir tonda konuşan bir asistansın. ' +
+    'Yorumların 5-20 kelime arası, pozitif ve motivasyon verici olsun. ' +
+    'İnsanları cesaretlendiren, takdir eden yorumlar yap. ' +
+    'Empatik ve şefkatli bir dil kullan.',
+};
+
 /**
  * Groq AI ile yorum üret
  */
 export async function generateAiComment(
-  tweetText: string
+  tweetText: string,
+  commentStyle: CommentStyle = 'professional'
 ): Promise<string | null> {
   const apiKey = process.env.GROQ_API_KEY;
 
@@ -55,6 +90,8 @@ export async function generateAiComment(
     console.log('⚠️ GROQ_API_KEY tanımlı değil, AI yorum atlanıyor.');
     return null;
   }
+
+  const stylePrompt = STYLE_PROMPTS[commentStyle];
 
   try {
     const response = await fetch(
@@ -71,12 +108,10 @@ export async function generateAiComment(
             {
               role: 'system',
               content:
-                'Sen Türkçe konuşan, kısa ve samimi sosyal medya yorumları yazan bir asistansın. ' +
-                'Yorumların 5-20 kelime arası, pozitif ve doğal olsun. ' +
-                'Tweet Ekrem İmamoğlu destekçisi bir fan hesabından geliyor olabilir; ' +
-                'bu tonda, destekleyici ve nezaketli yaz. ' +
+                stylePrompt +
+                ' Türkçe konuş. ' +
                 'Eğer tweetin içeriğiyle mantıklı bir bağ kuramıyorsan, sadece 1-3 adet emoji ile cevap ver (👏❤️🔥🙌 gibi). ' +
-                'Asla saldırgan, hakaret içeren veya siyasi düşmanlaştırıcı bir dil kullanma.',
+                'Asla saldırgan, hakaret içeren veya düşmanlaştırıcı bir dil kullanma.',
             },
             {
               role: 'user',

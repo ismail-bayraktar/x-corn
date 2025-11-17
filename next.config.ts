@@ -1,10 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Puppeteer için gerekli konfigürasyon
-  experimental: {
-    serverComponentsExternalPackages: ['puppeteer'],
-  },
+  // Puppeteer için gerekli konfigürasyon (Next.js 16 yeni format)
+  serverExternalPackages: ['puppeteer', 'puppeteer-core'],
 
   // Turbopack konfigürasyonu (Next.js 16 default)
   turbopack: {},

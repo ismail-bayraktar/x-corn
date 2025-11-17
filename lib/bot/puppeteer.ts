@@ -130,7 +130,7 @@ export async function takeDebugScreenshot(
   accountName: string
 ): Promise<void> {
   try {
-    const path = `./debug-${accountName}-${Date.now()}.png`;
+    const path = `./debug-${accountName}-${Date.now()}.png` as `${string}.png`;
     await page.screenshot({ path, fullPage: true });
     console.log(`📸 Debug screenshot: ${path}`);
   } catch (error) {

@@ -9,6 +9,8 @@ export interface BotActivity {
     retweeted: boolean;
     commented: boolean;
   };
+  commentText?: string;
+  duration: number; // in milliseconds
   timestamp: string;
 }
 
@@ -21,6 +23,8 @@ const ActivitySchema = new Schema<BotActivity>({
     retweeted: { type: Boolean, required: true },
     commented: { type: Boolean, required: true },
   },
+  commentText: { type: String },
+  duration: { type: Number, required: true, default: 0 },
   timestamp: { type: String, required: true },
 });
 

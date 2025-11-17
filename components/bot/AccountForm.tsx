@@ -17,7 +17,14 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { TwitterAccount } from '@/lib/bot/types';
+import { TwitterAccount, CommentStyle } from '@/lib/bot/types';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Info, ChevronDown } from 'lucide-react';
 
 interface AccountFormProps {
@@ -31,8 +38,19 @@ export interface AccountFormData {
   authToken: string;
   ct0: string;
   canComment: boolean;
+  canLike: boolean;
+  canRetweet: boolean;
   useAI: boolean;
+  commentStyle: CommentStyle;
 }
+
+const STYLE_LABELS: Record<CommentStyle, string> = {
+  professional: 'Profesyonel',
+  friendly: 'Arkadaş Canlısı',
+  humorous: 'Esprili',
+  informative: 'Bilgilendirici',
+  supportive: 'Destekleyici',
+};
 
 export function AccountForm({ account, onSave, onCancel }: AccountFormProps) {
   const [formData, setFormData] = useState<AccountFormData>({
@@ -40,7 +58,10 @@ export function AccountForm({ account, onSave, onCancel }: AccountFormProps) {
     authToken: account?.cookies.find((c) => c.name === 'auth_token')?.value || '',
     ct0: account?.cookies.find((c) => c.name === 'ct0')?.value || '',
     canComment: account?.canComment ?? true,
+    canLike: account?.canLike ?? true,
+    canRetweet: account?.canRetweet ?? true,
     useAI: account?.useAI ?? false,
+    commentStyle: account?.commentStyle ?? 'professional',
   });
 
   const [errors, setErrors] = useState<Partial<Record<keyof AccountFormData, string>>>({});
@@ -158,35 +179,94 @@ export function AccountForm({ account, onSave, onCancel }: AccountFormProps) {
             )}
           </div>
 
-          {/* Yorum Yapabilir */}
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="canComment"
-              checked={formData.canComment}
-              onCheckedChange={(checked) =>
-                setFormData({ ...formData, canComment: !!checked })
-              }
-            />
-            <Label htmlFor="canComment" className="cursor-pointer">
-              Yorum yapabilir (sadece beğeni + RT için işaretlemeyin)
-            </Label>
-          </div>
+          {/* Aksiyon Seçenekleri */}
+          <div className="space-y-3 p-4 border border-slate-800 rounded-lg bg-slate-950">
+            <Label className="text-base font-medium">Aksiyon Seçenekleri</Label>
 
-          {/* AI Kullan */}
-          {formData.canComment && (
+            {/* Beğeni */}
             <div className="flex items-center space-x-2">
               <Checkbox
-                id="useAI"
-                checked={formData.useAI}
+                id="canLike"
+                checked={formData.canLike}
                 onCheckedChange={(checked) =>
-                  setFormData({ ...formData, useAI: !!checked })
+                  setFormData({ ...formData, canLike: !!checked })
                 }
               />
-              <Label htmlFor="useAI" className="cursor-pointer">
-                AI ile yorum üret (GROQ API kullanır)
+              <Label htmlFor="canLike" className="cursor-pointer">
+                Beğeni yapabilir
               </Label>
             </div>
-          )}
+
+            {/* Retweet */}
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="canRetweet"
+                checked={formData.canRetweet}
+                onCheckedChange={(checked) =>
+                  setFormData({ ...formData, canRetweet: !!checked })
+                }
+              />
+              <Label htmlFor="canRetweet" className="cursor-pointer">
+                Retweet yapabilir
+              </Label>
+            </div>
+
+            {/* Yorum Yapabilir */}
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="canComment"
+                checked={formData.canComment}
+                onCheckedChange={(checked) =>
+                  setFormData({ ...formData, canComment: !!checked })
+                }
+              />
+              <Label htmlFor="canComment" className="cursor-pointer">
+                Yorum yapabilir
+              </Label>
+            </div>
+
+            {/* AI Kullan */}
+            {formData.canComment && (
+              <div className="pl-6 space-y-3 border-l-2 border-slate-800">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="useAI"
+                    checked={formData.useAI}
+                    onCheckedChange={(checked) =>
+                      setFormData({ ...formData, useAI: !!checked })
+                    }
+                  />
+                  <Label htmlFor="useAI" className="cursor-pointer">
+                    AI ile yorum üret (GROQ API kullanır)
+                  </Label>
+                </div>
+
+                {/* Yorum Stili */}
+                {formData.useAI && (
+                  <div className="space-y-2">
+                    <Label htmlFor="commentStyle" className="text-sm">Yorum Stili</Label>
+                    <Select
+                      value={formData.commentStyle}
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, commentStyle: value as CommentStyle })
+                      }
+                    >
+                      <SelectTrigger id="commentStyle">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(STYLE_LABELS).map(([value, label]) => (
+                          <SelectItem key={value} value={value}>
+                            {label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
           {/* Butonlar */}
           <div className="flex gap-2 pt-4">

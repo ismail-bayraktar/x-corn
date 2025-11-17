@@ -11,27 +11,25 @@ export function addLog(
   accountId: string,
   accountName: string,
   level: LogLevel,
-  message: string
+  message: string,
+  sessionId: string
 ): BotLog {
   const log: BotLog = {
     // Unique ID: timestamp + random = her zaman farklı
     id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    sessionId,
     accountName,
     level,
     message,
-    timestamp: new Date().toLocaleTimeString('tr-TR', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-    }),
+    timestamp: new Date().toISOString(),
     accountColor: getAccountColor(accountId),
   };
 
   logs.push(log);
 
-  // Son 100 log'u tut (performans)
-  if (logs.length > 100) {
-    logs = logs.slice(-100);
+  // Son 200 log'u tut (performans) - session bazlı olduğu için daha fazla
+  if (logs.length > 200) {
+    logs = logs.slice(-200);
   }
 
   return log;

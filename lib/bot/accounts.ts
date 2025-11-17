@@ -10,7 +10,10 @@ const DEFAULT_ACCOUNTS: TwitterAccount[] = [
     id: '1',
     name: 'mertcanatik34',
     canComment: true,
+    canLike: true,
+    canRetweet: true,
     useAI: true,
+    commentStyle: 'friendly',
     enabled: true,
     cookies: [
       {
@@ -37,7 +40,10 @@ const DEFAULT_ACCOUNTS: TwitterAccount[] = [
     id: '2',
     name: 'turkiye_senin',
     canComment: true,
+    canLike: true,
+    canRetweet: true,
     useAI: true,
+    commentStyle: 'professional',
     enabled: true,
     cookies: [
       {
@@ -64,7 +70,10 @@ const DEFAULT_ACCOUNTS: TwitterAccount[] = [
     id: '3',
     name: 'myildizlartr',
     canComment: false,
+    canLike: true,
+    canRetweet: false,
     useAI: false,
+    commentStyle: 'informative',
     enabled: true,
     cookies: [
       {
@@ -137,7 +146,10 @@ export function createAccount(
     id: Date.now().toString(),
     name,
     canComment,
+    canLike: true, // Varsayılan aktif
+    canRetweet: true, // Varsayılan aktif
     useAI,
+    commentStyle: 'professional', // Varsayılan stil
     enabled: true, // Yeni hesaplar varsayılan olarak aktif
     cookies,
     createdAt: new Date().toISOString(),

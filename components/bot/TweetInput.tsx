@@ -2,17 +2,16 @@
 
 import { useState } from 'react';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Play, Loader } from 'lucide-react';
+import { Label } from '@/components/ui/label';
 
 interface TweetInputProps {
-  onStart: (url: string) => void;
+  onStart: () => void;
   isRunning: boolean;
+  value: string;
+  onChange: (value: string) => void;
 }
 
-export function TweetInput({ onStart, isRunning }: TweetInputProps) {
-  const [url, setUrl] = useState('');
+export function TweetInput({ onStart, isRunning, value, onChange }: TweetInputProps) {
   const [error, setError] = useState('');
 
   const validateUrl = (input: string): boolean => {
@@ -35,61 +34,34 @@ export function TweetInput({ onStart, isRunning }: TweetInputProps) {
     return true;
   };
 
-  const handleStart = () => {
-    if (validateUrl(url)) {
-      onStart(url);
-    }
-  };
-
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !isRunning) {
-      handleStart();
+    if (e.key === 'Enter' && !isRunning && validateUrl(value)) {
+      onStart();
     }
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Tweet URL</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="flex gap-2">
-          <div className="flex-1">
-            <Input
-              type="url"
-              placeholder="https://x.com/username/status/1234567890"
-              value={url}
-              onChange={(e) => {
-                setUrl(e.target.value);
-                setError('');
-              }}
-              onKeyPress={handleKeyPress}
-              disabled={isRunning}
-              className={error ? 'border-red-500' : ''}
-            />
-            {error && (
-              <p className="text-sm text-red-500 mt-1">{error}</p>
-            )}
-          </div>
-          <Button
-            onClick={handleStart}
-            disabled={isRunning || !url}
-            className="min-w-[120px]"
-          >
-            {isRunning ? (
-              <>
-                <Loader className="mr-2 h-4 w-4 animate-spin" />
-                Çalışıyor
-              </>
-            ) : (
-              <>
-                <Play className="mr-2 h-4 w-4" />
-                Çalıştır
-              </>
-            )}
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="space-y-2">
+      <Label htmlFor="tweet-url" className="text-base font-medium">
+        Tweet URL
+      </Label>
+      <Input
+        id="tweet-url"
+        type="url"
+        placeholder="https://x.com/username/status/1234567890"
+        value={value}
+        onChange={(e) => {
+          onChange(e.target.value);
+          setError('');
+        }}
+        onKeyPress={handleKeyPress}
+        onBlur={() => value && validateUrl(value)}
+        disabled={isRunning}
+        className={error ? 'border-red-500' : ''}
+      />
+      {error && (
+        <p className="text-sm text-red-500">{error}</p>
+      )}
+    </div>
   );
 }

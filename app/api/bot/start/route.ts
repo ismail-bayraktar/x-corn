@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Browser } from 'puppeteer';
 import connectDB from '@/lib/db/mongodb';
 import Account from '@/lib/db/models/Account';
+import BotSettings from '@/lib/db/models/BotSettings';
 import { addLog, clearLogs } from '@/lib/bot/logger';
 import { addActivity } from '@/lib/bot/stats';
 import {
@@ -14,6 +15,11 @@ import {
   wait,
 } from '@/lib/bot/puppeteer';
 import { likeTweet, retweetTweet, replyToTweet } from '@/lib/bot/actions';
+import {
+  getAutoDistribution,
+  getActionDistributionForAccount,
+} from '@/lib/bot/distribution';
+import { TwitterAccount } from '@/lib/bot/types';
 
 // Bot çalışma durumu (in-memory)
 let isRunning = false;
@@ -31,7 +37,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { tweetUrl, selectedAccountIds } = body;
+    const { tweetUrl, selectedAccountIds, sessionId } = body;
 
     if (!tweetUrl || !tweetUrl.includes('x.com')) {
       return NextResponse.json(
@@ -47,10 +53,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!sessionId) {
+      return NextResponse.json(
+        { error: 'SessionId gerekli' },
+        { status: 400 }
+      );
+    }
+
     // Çalışmaya başla (async)
     isRunning = true;
     shouldStop = false;
-    runBot(tweetUrl, selectedAccountIds).finally(() => {
+    runBot(tweetUrl, selectedAccountIds, sessionId).finally(() => {
       isRunning = false;
       currentBrowser = null;
     });
@@ -71,62 +84,87 @@ export async function POST(request: NextRequest) {
 /**
  * Bot ana çalışma fonksiyonu (async)
  */
-async function runBot(tweetUrl: string, selectedAccountIds: string[]): Promise<void> {
+async function runBot(
+  tweetUrl: string,
+  selectedAccountIds: string[],
+  sessionId: string
+): Promise<void> {
   clearLogs(); // Önceki logları temizle
 
   await connectDB();
+
+  // Hesapları yükle
   const allAccounts = await Account.find({}).lean();
-  // Sadece seçili VE aktif hesapları al
-  const accounts = allAccounts.filter(acc =>
+  const accounts = allAccounts.filter((acc: TwitterAccount) =>
     selectedAccountIds.includes(acc.id) && acc.enabled
   );
 
   if (accounts.length === 0) {
-    addLog('system', 'System', 'error', '❌ Seçili ve aktif hesap bulunamadı');
+    addLog('system', 'System', 'error', '❌ Seçili ve aktif hesap bulunamadı', sessionId);
     return;
   }
 
+  // Bot settings'i yükle
+  const settings = await BotSettings.findOne({ id: 'global' }).lean();
+  const autoMode = settings?.autoDistribution?.enabled || false;
+
   const totalSelected = selectedAccountIds.length;
   const skipped = totalSelected - accounts.length;
-  addLog('system', 'System', 'info', `🚀 Bot başlatılıyor... (${accounts.length} hesap${skipped > 0 ? `, ${skipped} pasif/geçersiz atlandı` : ''})`);
-  addLog('system', 'System', 'info', `🔗 Hedef tweet: ${tweetUrl}`);
+
+  addLog('system', 'System', 'info', `🚀 Bot başlatılıyor... (${accounts.length} hesap${skipped > 0 ? `, ${skipped} pasif/geçersiz atlandı` : ''})`, sessionId);
+  addLog('system', 'System', 'info', `🔗 Hedef tweet: ${tweetUrl}`, sessionId);
+  addLog('system', 'System', 'info', `🎯 Mod: ${autoMode ? 'Otomatik Dağıtım' : 'Manuel Ayarlar'}`, sessionId);
+
+  // Auto distribution hesapla (eğer aktifse)
+  let autoDistributions;
+  if (autoMode && settings) {
+    const { likePercentage, retweetPercentage, commentPercentage } = settings.autoDistribution;
+    autoDistributions = await getAutoDistribution(
+      accounts as TwitterAccount[],
+      likePercentage,
+      retweetPercentage,
+      commentPercentage
+    );
+    addLog('system', 'System', 'info', `📊 Dağıtım: ${likePercentage}% beğeni, ${retweetPercentage}% RT, ${commentPercentage}% yorum`, sessionId);
+  }
 
   let browser;
 
   try {
     browser = await launchBrowser();
-    currentBrowser = browser; // Browser'ı global değişkene ata
-    addLog('system', 'System', 'success', '✅ Browser başlatıldı');
+    currentBrowser = browser;
+    addLog('system', 'System', 'success', '✅ Browser başlatıldı', sessionId);
 
-    // Hesapları sırayla işle (sadece aktif olanlar)
-    for (const account of accounts) {
+    // Hesapları sırayla işle
+    for (const account of accounts as TwitterAccount[]) {
       // Stop kontrolü
       if (shouldStop) {
-        addLog('system', 'System', 'warning', '⏹️ Bot durduruldu!');
+        addLog('system', 'System', 'warning', '⏹️ Bot durduruldu!', sessionId);
         break;
       }
 
-      addLog(account.id, account.name, 'info', '🔄 İşlem başlıyor...');
+      const startTime = Date.now();
+      addLog(account.id, account.name, 'info', '🔄 İşlem başlıyor...', sessionId);
 
       try {
         const page = await createAuthenticatedPage(browser, account);
-        addLog(account.id, account.name, 'info', '🍪 Cookie\'ler yüklendi');
+        addLog(account.id, account.name, 'info', '🍪 Cookie\'ler yüklendi', sessionId);
 
         // Tweet sayfasını aç
         const loaded = await loadTweetPage(page, tweetUrl);
         if (!loaded) {
-          addLog(account.id, account.name, 'error', '❌ Tweet yüklenemedi');
+          addLog(account.id, account.name, 'error', '❌ Tweet yüklenemedi', sessionId);
           await page.close();
           continue;
         }
 
-        addLog(account.id, account.name, 'success', '✅ Tweet yüklendi');
+        addLog(account.id, account.name, 'success', '✅ Tweet yüklendi', sessionId);
         await wait(1000);
 
         // Tweet metnini çıkar (AI yorum için)
         const tweetText = await extractTweetText(page);
         if (tweetText) {
-          addLog(account.id, account.name, 'info', `📝 Tweet metni alındı`);
+          addLog(account.id, account.name, 'info', `📝 Tweet metni alındı`, sessionId);
         }
 
         await wait(2000);
@@ -137,38 +175,66 @@ async function runBot(tweetUrl: string, selectedAccountIds: string[]): Promise<v
           break;
         }
 
-        // Beğen
-        const liked = await likeTweet(page);
-        if (liked) {
-          addLog(account.id, account.name, 'success', '👍 Beğeni yapıldı');
+        // Action distribution'ı al (auto veya manual)
+        const distribution = getActionDistributionForAccount(
+          account,
+          autoMode,
+          autoDistributions
+        );
+
+        // İşlem planını logla
+        const actions: string[] = [];
+        if (distribution.like) actions.push('👍 Beğeni');
+        if (distribution.retweet) actions.push('🔁 RT');
+        if (distribution.comment) actions.push('💬 Yorum');
+
+        if (actions.length > 0) {
+          addLog(account.id, account.name, 'info', `📋 Planlanan: ${actions.join(', ')}`, sessionId);
         } else {
-          addLog(account.id, account.name, 'warning', '⚠️ Beğeni yapılamadı');
+          addLog(account.id, account.name, 'warning', '⚠️ Hiçbir aksiyon planlanmadı', sessionId);
         }
 
-        // Retweet
-        const retweeted = await retweetTweet(page);
-        if (retweeted) {
-          addLog(account.id, account.name, 'success', '🔁 Retweet yapıldı');
-        } else {
-          addLog(account.id, account.name, 'warning', '⚠️ Retweet yapılamadı');
-        }
-
-        // Yorum (sadece canComment = true ise)
-        let commented = false;
-        if (account.canComment) {
-          const replied = await replyToTweet(page, tweetText, account.useAI);
-          commented = replied;
-          if (replied) {
-            addLog(account.id, account.name, 'success', '💬 Yorum gönderildi');
+        // Beğen (eğer distribution izin veriyorsa)
+        let liked = false;
+        if (distribution.like) {
+          liked = await likeTweet(page);
+          if (liked) {
+            addLog(account.id, account.name, 'success', '👍 Beğeni yapıldı', sessionId);
           } else {
-            addLog(account.id, account.name, 'warning', '⚠️ Yorum gönderilemedi');
+            addLog(account.id, account.name, 'warning', '⚠️ Beğeni yapılamadı', sessionId);
           }
-        } else {
-          addLog(account.id, account.name, 'info', '💬 Yorum modu kapalı (sadece beğeni + RT)');
         }
+
+        // Retweet (eğer distribution izin veriyorsa)
+        let retweeted = false;
+        if (distribution.retweet) {
+          retweeted = await retweetTweet(page);
+          if (retweeted) {
+            addLog(account.id, account.name, 'success', '🔁 Retweet yapıldı', sessionId);
+          } else {
+            addLog(account.id, account.name, 'warning', '⚠️ Retweet yapılamadı', sessionId);
+          }
+        }
+
+        // Yorum (eğer distribution izin veriyorsa)
+        let commented = false;
+        let commentText: string | undefined;
+        if (distribution.comment && account.canComment) {
+          const result = await replyToTweet(page, tweetText, account.useAI, account.commentStyle);
+          if (result) {
+            commented = true;
+            commentText = result;
+            addLog(account.id, account.name, 'success', `💬 Yorum gönderildi: "${result}"`, sessionId);
+          } else {
+            addLog(account.id, account.name, 'warning', '⚠️ Yorum gönderilemedi', sessionId);
+          }
+        }
+
+        // Duration hesapla
+        const duration = Date.now() - startTime;
 
         // İstatistiklere kaydet
-        addActivity({
+        await addActivity({
           id: `${account.id}-${Date.now()}`,
           tweetUrl,
           accountName: account.name,
@@ -177,11 +243,19 @@ async function runBot(tweetUrl: string, selectedAccountIds: string[]): Promise<v
             retweeted,
             commented,
           },
+          commentText,
+          duration,
           timestamp: new Date().toISOString(),
         });
 
         await page.close();
-        addLog(account.id, account.name, 'success', `✅ ${account.name} için işlemler tamamlandı`);
+        addLog(
+          account.id,
+          account.name,
+          'success',
+          `✅ İşlemler tamamlandı (${(duration / 1000).toFixed(1)}s)`,
+          sessionId
+        );
 
         // Stop kontrolü
         if (shouldStop) {
@@ -195,21 +269,22 @@ async function runBot(tweetUrl: string, selectedAccountIds: string[]): Promise<v
           account.id,
           account.name,
           'error',
-          `❌ Hata: ${(error as Error).message}`
+          `❌ Hata: ${(error as Error).message}`,
+          sessionId
         );
       }
     }
 
     if (!shouldStop) {
-      addLog('system', 'System', 'success', '🎉 Tüm hesaplar için işlemler tamamlandı!');
+      addLog('system', 'System', 'success', '🎉 Tüm hesaplar için işlemler tamamlandı!', sessionId);
     }
   } catch (error) {
-    addLog('system', 'System', 'error', `💥 Kritik hata: ${(error as Error).message}`);
+    addLog('system', 'System', 'error', `💥 Kritik hata: ${(error as Error).message}`, sessionId);
   } finally {
     if (browser) {
       await browser.close();
       currentBrowser = null;
-      addLog('system', 'System', 'info', '🔒 Browser kapatıldı');
+      addLog('system', 'System', 'info', '🔒 Browser kapatıldı', sessionId);
     }
   }
 }
@@ -231,14 +306,14 @@ export async function DELETE() {
   }
 
   shouldStop = true;
-  addLog('system', 'System', 'warning', '⏹️ Bot durdurma komutu alındı...');
+  addLog('system', 'System', 'warning', '⏹️ Bot durdurma komutu alındı...', '');
 
   // Browser'ı force close et
   if (currentBrowser) {
     try {
       await currentBrowser.close();
       currentBrowser = null;
-      addLog('system', 'System', 'info', '🔒 Browser zorla kapatıldı');
+      addLog('system', 'System', 'info', '🔒 Browser zorla kapatıldı', '');
     } catch (error) {
       console.error('Browser close error:', error);
     }

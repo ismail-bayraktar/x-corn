@@ -1,19 +1,9 @@
 // Bot istatistik yönetimi (MongoDB ile)
 
 import connectDB from '@/lib/db/mongodb';
-import Activity from '@/lib/db/models/Activity';
+import Activity, { BotActivity } from '@/lib/db/models/Activity';
 
-export interface BotActivity {
-  id: string;
-  tweetUrl: string;
-  accountName: string;
-  actions: {
-    liked: boolean;
-    retweeted: boolean;
-    commented: boolean;
-  };
-  timestamp: string;
-}
+export type { BotActivity };
 
 export interface BotStats {
   totalRuns: number;

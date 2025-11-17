@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { BotStats } from '@/lib/bot/types';
+import { BotStats } from '@/lib/bot/stats';
 import { BarChart3, Heart, Repeat, MessageCircle, Activity, ExternalLink } from 'lucide-react';
 
 export default function DashboardPage() {
