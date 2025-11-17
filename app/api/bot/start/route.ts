@@ -1,7 +1,7 @@
 // Bot başlatma API route
 
 import { NextRequest, NextResponse } from 'next/server';
-import { Browser } from 'playwright-core';
+import { Browser } from 'puppeteer';
 import connectDB from '@/lib/db/mongodb';
 import Account from '@/lib/db/models/Account';
 import BotSettings from '@/lib/db/models/BotSettings';
@@ -9,11 +9,11 @@ import { addLog, clearLogs } from '@/lib/bot/logger';
 import { addActivity } from '@/lib/bot/stats';
 import {
   launchBrowser,
-  createAuthenticatedContext,
+  createAuthenticatedPage,
   loadTweetPage,
   extractTweetText,
   wait,
-} from '@/lib/bot/playwright';
+} from '@/lib/bot/puppeteer';
 import { likeTweet, retweetTweet, replyToTweet } from '@/lib/bot/actions';
 import {
   getAutoDistribution,
@@ -147,14 +147,14 @@ async function runBot(
       addLog(account.id, account.name, 'info', '🔄 İşlem başlıyor...', sessionId);
 
       try {
-        const { context, page } = await createAuthenticatedContext(browser, account);
+        const page = await createAuthenticatedPage(browser, account);
         addLog(account.id, account.name, 'info', '🍪 Cookie\'ler yüklendi', sessionId);
 
         // Tweet sayfasını aç
         const loaded = await loadTweetPage(page, tweetUrl);
         if (!loaded) {
           addLog(account.id, account.name, 'error', '❌ Tweet yüklenemedi', sessionId);
-          await context.close();
+          await page.close();
           continue;
         }
 
@@ -171,7 +171,7 @@ async function runBot(
 
         // Stop kontrolü
         if (shouldStop) {
-          await context.close();
+          await page.close();
           break;
         }
 
@@ -248,7 +248,7 @@ async function runBot(
           timestamp: new Date().toISOString(),
         });
 
-        await context.close();
+        await page.close();
         addLog(
           account.id,
           account.name,

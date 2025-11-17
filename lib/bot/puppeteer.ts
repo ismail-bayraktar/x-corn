@@ -1,58 +1,44 @@
-// Playwright browser kontrolü (Vercel serverless uyumlu)
+// Puppeteer browser kontrolü
 
-import { chromium, Browser, Page, BrowserContext } from 'playwright-core';
-import chromiumPkg from '@sparticuz/chromium';
+import puppeteer, { Browser, Page } from 'puppeteer';
 import { TwitterAccount } from './types';
 
 /**
- * Playwright browser başlat (Vercel serverless compatible)
+ * Puppeteer browser başlat
  */
 export async function launchBrowser(): Promise<Browser> {
-  // Vercel production için chromium executable path
-  const isProduction = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
-
-  const browser = await chromium.launch({
-    args: isProduction
-      ? chromiumPkg.args
-      : [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-blink-features=AutomationControlled',
-        ],
-    executablePath: isProduction
-      ? await chromiumPkg.executablePath()
-      : undefined,
+  const browser = await puppeteer.launch({
     headless: true,
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-blink-features=AutomationControlled',
+      '--window-size=1920,1080',
+    ],
   });
 
   return browser;
 }
 
 /**
- * Browser context oluştur ve hesap cookie'lerini yükle
+ * Yeni sayfa aç ve hesap cookie'lerini yükle
  */
-export async function createAuthenticatedContext(
+export async function createAuthenticatedPage(
   browser: Browser,
   account: TwitterAccount
-): Promise<{ context: BrowserContext; page: Page }> {
-  const context = await browser.newContext({
-    viewport: { width: 1920, height: 1080 },
-    userAgent:
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-  });
+): Promise<Page> {
+  const page = await browser.newPage();
 
-  // Cookie'leri context'e ekle
-  await context.addCookies(account.cookies.map(cookie => ({
-    name: cookie.name,
-    value: cookie.value,
-    domain: '.x.com',
-    path: '/',
-  })));
+  await page.setViewport({ width: 1920, height: 1080 });
+  await page.setUserAgent(
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+  );
 
-  const page = await context.newPage();
+  // Cookie'leri yükle
+  await page.setCookie(...account.cookies);
 
-  return { context, page };
+  return page;
 }
 
 /**
@@ -85,9 +71,11 @@ export async function loadTweetPage(
  */
 export async function extractTweetText(page: Page): Promise<string> {
   try {
-    const locator = page.locator('article[data-testid="tweet"] div[data-testid="tweetText"]');
-    const text = await locator.textContent();
-    return (text || '').trim();
+    const text = await page.$eval(
+      'article[data-testid="tweet"] div[data-testid="tweetText"]',
+      (el) => el.textContent || ''
+    );
+    return text.trim();
   } catch (error) {
     console.error('Tweet metni okunamadı:', (error as Error).message);
     return '';
@@ -142,7 +130,7 @@ export async function takeDebugScreenshot(
   accountName: string
 ): Promise<void> {
   try {
-    const path = `./debug-${accountName}-${Date.now()}.png`;
+    const path = `./debug-${accountName}-${Date.now()}.png` as `${string}.png`;
     await page.screenshot({ path, fullPage: true });
     console.log(`📸 Debug screenshot: ${path}`);
   } catch (error) {

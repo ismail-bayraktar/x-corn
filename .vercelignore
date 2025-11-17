@@ -1,0 +1,2 @@
+# Vercel Deployment - Exclude Puppeteer Chrome binary
+node_modules/puppeteer/.local-chromium

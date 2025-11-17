@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/db/mongodb';
 import Account from '@/lib/db/models/Account';
-import { launchBrowser, createAuthenticatedContext } from '@/lib/bot/playwright';
+import { launchBrowser, createAuthenticatedPage } from '@/lib/bot/puppeteer';
 
 // POST /api/accounts/[id]/validate - Cookie'lerin geçerliliğini kontrol et
 export async function POST(
@@ -25,8 +25,8 @@ export async function POST(
     // Browser'ı başlat
     browser = await launchBrowser();
 
-    // Cookie'lerle authenticated context ve page oluştur
-    const { context, page } = await createAuthenticatedContext(browser, account);
+    // Cookie'lerle authenticated page oluştur
+    const page = await createAuthenticatedPage(browser, account);
 
     // Twitter ana sayfasına git (timeout artırıldı)
     await page.goto('https://x.com/home', {
@@ -43,7 +43,7 @@ export async function POST(
 
     console.log(`[Validation] Account: ${account.name}, URL: ${currentUrl}, Valid: ${isValid}`);
 
-    await context.close();
+    await page.close();
 
     // Doğrulama sonucunu hesaba kaydet
     await Account.findOneAndUpdate(
