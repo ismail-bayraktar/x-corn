@@ -1,7 +1,7 @@
 // Twitter aksiyonları (like, retweet, comment)
 
-import { Page } from 'puppeteer-core';
-import { clickWithRetry, wait } from './puppeteer';
+import { Page } from 'playwright-core';
+import { clickWithRetry, wait } from './playwright';
 import { generateAiComment, getRandomComment } from './groq';
 import { CommentStyle } from './types';
 
@@ -115,7 +115,7 @@ export async function replyToTweet(
       await page.waitForSelector(selector, { timeout: 3000 });
       await page.click(selector);
       await wait(500);
-      await page.keyboard.type(comment, { delay: 100 });
+      await page.type(selector, comment, { delay: 100 });
       console.log('✅ Yorum yazıldı');
       textareaFound = true;
       break;
