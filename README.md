@@ -61,18 +61,51 @@ npm run dev
 
 Tarayıcıda `http://localhost:3000` adresini açın.
 
-## Vercel Deploy
+## Production Deployment
 
-1. **MongoDB Atlas** hesabı oluşturun ve connection string alın
+### MongoDB Atlas Setup
 
-2. **Vercel'e deploy edin**
+1. **MongoDB Atlas** hesabı oluşturun: https://cloud.mongodb.com/
+2. **Cluster** oluşturun (Free tier yeterli)
+3. **Database User** oluşturun
+4. **IP Whitelist** ayarlayın:
+   - Network Access → Add IP Address
+   - Allow Access From Anywhere → `0.0.0.0/0`
+5. **Connection String** kopyalayın
+
+### Database Migration
+
 ```bash
-vercel
+# Bağlantıyı test et
+npm run db:test
+
+# Seed verilerini migrate et
+npm run db:migrate
 ```
 
-3. **Environment Variables** ekleyin (Vercel Dashboard):
-   - `MONGODB_URI`: MongoDB Atlas connection string
-   - `GROQ_API_KEY`: Groq API key
+### Vercel Deployment
+
+**Detaylı deployment rehberi**: [`DEPLOYMENT.md`](./DEPLOYMENT.md) dosyasına bakın.
+
+**Hızlı deployment**:
+
+```bash
+# Vercel CLI ile
+vercel
+
+# Environment variables ekle
+vercel env add MONGODB_URI
+vercel env add GROQ_API_KEY
+
+# Production'a deploy
+vercel --prod
+```
+
+**Environment Variables**:
+- `MONGODB_URI`: MongoDB Atlas connection string
+- `GROQ_API_KEY`: Groq API key
+
+Alternatif olarak Vercel Dashboard'dan deploy edebilirsiniz.
 
 ## Kullanım
 
